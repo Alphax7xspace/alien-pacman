@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alien vs CIA Agents - Pacman-like Game</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            text-align: center;
+        }
+        #canvas {
+            background-color: #111;
+            border: 2px solid #fff;
+        }
+        #score, #lives {
+            margin: 10px 0;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="canvas" width="560" height="620"></canvas>
+        <div id="score">Score: 0</div>
+        <div id="lives">Lives: 3</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const livesElement = document.getElementById('lives');
+
+        const TILE_SIZE = 20;
+        const MAZE_WIDTH = 28;
+        const MAZE_HEIGHT = 31;
+
+        // Maze layout (1: wall, 0: empty/dot, 2: power pellet)
+        const maze = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+            [1,2,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,2,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
+            [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
+            [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+            [1,2,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,2,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+            [1,0,0,0,1,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,1,0,0,0,1],
+            [1,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
+            [1,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        let player = {
+            x: 13.5 * TILE_SIZE,
+            y: 23 * TILE_SIZE,
+            speed: 2,
+            dir: { x: 0, y: 0 },
+            nextDir: { x: 0, y: 0 },
+            radius: TILE_SIZE / 2 - 2,
+            mouthAngle: 0,
+            mouthSpeed: 0.2
+        };
+
+        let ghosts = [
+            { x: 13.5 * TILE_SIZE, y: 11 * TILE_SIZE, color: '#FF0000', dir: { x: 1, y: 0 }, speed: 1.5 },
+            { x: 13.5 * TILE_SIZE, y: 11 * TILE_SIZE, color: '#00FFFF', dir: { x: -1, y: 0 }, speed: 1.5 },
+            { x: 13.5 * TILE_SIZE, y: 11 * TILE_SIZE, color: '#FFB852', dir: { x: 0, y: 1 }, speed: 1.5 },
+            { x: 13.5 * TILE_SIZE, y: 11 * TILE_SIZE, color: '#FF69B4', dir: { x: 0, y: -1 }, speed: 1.5 }
+        ];
+
+        let score = 0;
+        let lives = 3;
+        let dots = [];
+        let powerPellets = [];
+        let frightenedTime = 0;
+        const FRIGHTENED_DURATION = 5000; // 5 seconds
+
+        function init() {
+            dots = [];
+            powerPellets = [];
+            for (let y = 0; y < MAZE_HEIGHT; y++) {
+                for (let x = 0; x < MAZE_WIDTH; x++) {
+                    if (maze[y][x] === 0) {
+                        dots.push({ x: x * TILE_SIZE + TILE_SIZE / 2, y: y * TILE_SIZE + TILE_SIZE / 2 });
+                    } else if (maze[y][x] === 2) {
+                        powerPellets.push({ x: x * TILE_SIZE + TILE_SIZE / 2, y: y * TILE_SIZE + TILE_SIZE / 2 });
+                    }
+                }
+            }
+        }
+
+        init();
+
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowLeft': player.nextDir = { x: -1, y: 0 }; break;
+                case 'ArrowRight': player.nextDir = { x: 1, y: 0 }; break;
+                case 'ArrowUp': player.nextDir = { x: 0, y: -1 }; break;
+                case 'ArrowDown': player.nextDir = { x: 0, y: 1 }; break;
+            }
+        });
+
+        function drawMaze() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            for (let y = 0; y < MAZE_HEIGHT; y++) {
+                for (let x = 0; x < MAZE_WIDTH; x++) {
+                    if (maze[y][x] === 1) {
+                        ctx.fillStyle = '#0000FF';
+                        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+        }
+
+        function drawDots() {
+            ctx.fillStyle = '#FFFFFF';
+            dots.forEach(dot => {
+                ctx.beginPath();
+                ctx.arc(dot.x, dot.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.fillStyle = '#FFD700';
+            powerPellets.forEach(pellet => {
+                ctx.beginPath();
+                ctx.arc(pellet.x, pellet.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawPlayer() {
+            // Alien body (green circle)
+            ctx.fillStyle = '#00FF00';
+            ctx.beginPath();
+            ctx.arc(player.x + TILE_SIZE / 2, player.y + TILE_SIZE / 2, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes (simple white dots)
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(player.x + TILE_SIZE / 3, player.y + TILE_SIZE / 3, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(player.x + 2 * TILE_SIZE / 3, player.y + TILE_SIZE / 3, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Antenna (simple line)
+            ctx.strokeStyle = '#00FF00';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(player.x + TILE_SIZE / 2, player.y + TILE_SIZE / 4);
+            ctx.lineTo(player.x + TILE_SIZE / 2, player.y);
+            ctx.stroke();
+        }
+
+        function drawGhosts() {
+            ghosts.forEach(ghost => {
+                if (frightenedTime > 0) {
+                    ctx.fillStyle = '#0000FF'; // Blue when frightened
+                } else {
+                    ctx.fillStyle = ghost.color;
+                }
+                // CIA agent body (simple suit-like shape)
+                ctx.fillRect(ghost.x, ghost.y, TILE_SIZE, TILE_SIZE);
+
+                // Hat (black triangle)
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.moveTo(ghost.x + TILE_SIZE / 2, ghost.y);
+                ctx.lineTo(ghost.x, ghost.y + TILE_SIZE / 4);
+                ctx.lineTo(ghost.x + TILE_SIZE, ghost.y + TILE_SIZE / 4);
+                ctx.fill();
+
+                // Eyes (white)
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(ghost.x + TILE_SIZE / 3, ghost.y + TILE_SIZE / 2, 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(ghost.x + 2 * TILE_SIZE / 3, ghost.y + TILE_SIZE / 2, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Tie (red)
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(ghost.x + TILE_SIZE / 2 - 2, ghost.y + TILE_SIZE / 2 + 2, 4, TILE_SIZE / 4);
+            });
+        }
+
+        function canMove(x, y, dir) {
+            const nextX = Math.floor((x + dir.x * TILE_SIZE / 2) / TILE_SIZE);
+            const nextY = Math.floor((y + dir.y * TILE_SIZE / 2) / TILE_SIZE);
+            return maze[nextY][nextX] !== 1;
+        }
+
+        function updatePlayer() {
+            const centerX = player.x + TILE_SIZE / 2;
+            const centerY = player.y + TILE_SIZE / 2;
+            const gridX = Math.floor(centerX / TILE_SIZE);
+            const gridY = Math.floor(centerY / TILE_SIZE);
+
+            // Eat dot
+            dots = dots.filter(dot => {
+                if (Math.hypot(dot.x - centerX, dot.y - centerY) < 10) {
+                    score += 10;
+                    return false;
+                }
+                return true;
+            });
+
+            // Eat power pellet
+            powerPellets = powerPellets.filter(pellet => {
+                if (Math.hypot(pellet.x - centerX, pellet.y - centerY) < 10) {
+                    score += 50;
+                    frightenedTime = FRIGHTENED_DURATION;
+                    return false;
+                }
+                return true;
+            });
+
+            // Change direction if possible
+            if (player.nextDir.x !== 0 || player.nextDir.y !== 0) {
+                if (canMove(centerX, centerY, player.nextDir)) {
+                    player.dir = player.nextDir;
+                }
+            }
+
+            // Move if possible
+            if (canMove(centerX, centerY, player.dir)) {
+                player.x += player.dir.x * player.speed;
+                player.y += player.dir.y * player.speed;
+            }
+
+            // Wrap around (simple tunnels)
+            if (player.x < -TILE_SIZE) player.x = canvas.width;
+            if (player.x > canvas.width) player.x = -TILE_SIZE;
+
+            // Check win
+            if (dots.length === 0 && powerPellets.length === 0) {
+                alert('You win!');
+                resetGame();
+            }
+        }
+
+        function updateGhosts() {
+            ghosts.forEach(ghost => {
+                const centerX = ghost.x + TILE_SIZE / 2;
+                const centerY = ghost.y + TILE_SIZE / 2;
+
+                // Simple random movement
+                const directions = [
+                    { x: 1, y: 0 },
+                    { x: -1, y: 0 },
+                    { x: 0, y: 1 },
+                    { x: 0, y: -1 }
+                ];
+
+                let possibleDirs = directions.filter(dir => canMove(centerX, centerY, dir) && (dir.x !== -ghost.dir.x || dir.y !== -ghost.dir.y));
+
+                if (possibleDirs.length === 0) {
+                    possibleDirs = directions.filter(dir => canMove(centerX, centerY, dir));
+                }
+
+                if (possibleDirs.length > 0) {
+                    ghost.dir = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
+                }
+
+                ghost.x += ghost.dir.x * ghost.speed;
+                ghost.y += ghost.dir.y * ghost.speed;
+
+                // Wrap around
+                if (ghost.x < -TILE_SIZE) ghost.x = canvas.width;
+                if (ghost.x > canvas.width) ghost.x = -TILE_SIZE;
+            });
+        }
+
+        function checkCollisions() {
+            const playerCenterX = player.x + TILE_SIZE / 2;
+            const playerCenterY = player.y + TILE_SIZE / 2;
+
+            ghosts.forEach((ghost, index) => {
+                const ghostCenterX = ghost.x + TILE_SIZE / 2;
+                const ghostCenterY = ghost.y + TILE_SIZE / 2;
+
+                if (Math.hypot(playerCenterX - ghostCenterX, playerCenterY - ghostCenterY) < TILE_SIZE) {
+                    if (frightenedTime > 0) {
+                        // Eat ghost
+                        score += 200;
+                        ghosts[index] = { x: 13.5 * TILE_SIZE, y: 11 * TILE_SIZE, color: ghost.color, dir: { x: 1, y: 0 }, speed: 1.5 };
+                    } else {
+                        // Lose life
+                        lives--;
+                        if (lives <= 0) {
+                            alert('Game Over!');
+                            resetGame();
+                        } else {
+                            resetPositions();
+                        }
+                    }
+                }
+            });
+        }
+
+        function resetPositions() {
+            player.x = 13.5 * TILE_SIZE;
+            player.y = 23 * TILE_SIZE;
+            player.dir = { x: 0, y: 0 };
+            player.nextDir = { x: 0, y: 0 };
+
+            ghosts.forEach(ghost => {
+                ghost.x = 13.5 * TILE_SIZE;
+                ghost.y = 11 * TILE_SIZE;
+            });
+        }
+
+        function resetGame() {
+            score = 0;
+            lives = 3;
+            init();
+            resetPositions();
+        }
+
+        function gameLoop() {
+            drawMaze();
+            drawDots();
+            drawPlayer();
+            drawGhosts();
+
+            updatePlayer();
+            updateGhosts();
+            checkCollisions();
+
+            if (frightenedTime > 0) frightenedTime -= 16; // Approx 60fps
+
+            scoreElement.textContent = `Score: ${score}`;
+            livesElement.textContent = `Lives: ${lives}`;
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
